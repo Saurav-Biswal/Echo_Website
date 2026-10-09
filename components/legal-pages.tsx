@@ -1,0 +1,144 @@
+import Link from 'next/link';
+import { site } from '@/config/site';
+
+const legalReview = <p className="legal-draft"><strong>DRAFT · FOUNDER / INDIAN LEGAL REVIEW REQUIRED</strong><br />Updated 9 October 2026. This draft describes the source inspected for this website and the local Android project; it is not a final privacy notice or a legal opinion.</p>;
+
+export function SupportContact() {
+  return site.supportEmail
+    ? <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>
+    : <span>Echo’s support and privacy contact has not been provided. The operator must publish a monitored contact before launch.</span>;
+}
+
+export function PrivacyNoticeDraft() {
+  return <>
+    {legalReview}
+    <h2>Who is responsible?</h2>
+    <p>Echo is the product name shown on this website. The person or legal entity that operates the website and decides why personal data is used has not been identified to this project. Its legal name and address are unknown. For privacy questions, email <SupportContact />. The notice remains a draft until the operator details and data practices are reviewed.</p>
+    <h2>Website forms</h2>
+    <p><strong>Early access:</strong> email address is required; name and “what would you want Echo to help you remember?” are optional. The site validates the fields, records the submitted consent time, and sends the row to the configured <code>waitlist_signups</code> table in Supabase. The database also sets a creation time. The stated purpose is to record and respond to an early-access request. The form does not subscribe people to a separate newsletter.</p>
+    <p><strong>Contact and privacy requests:</strong> email address, selected topic and message are required; name is optional. The site records consent and creation timestamps and sends the row to the configured <code>contact_messages</code> table in Supabase. After a confirmed save for privacy-rights, grievance or privacy/account-deletion topics, the server submits a limited alert with the topic, record ID, submission time and privacy-request link; the alert excludes the sender’s email and message. No alert is sent for general contact topics, and no automated request review, identity verification or deletion is implemented.</p>
+    <p>Submitting a form is optional. The required fields are needed to record and respond to that request; optional name and use-case details may be left blank. The request is not successfully recorded unless the server reports a confirmed database write. Do not include passwords, sign-in codes, identity documents, health details or unrelated sensitive information.</p>
+    <h2>Other website processing</h2>
+    <p>The contact endpoint processes the forwarded client IP in an in-memory rate-limit map and checks a hidden spam field. The form database schema does not store the IP. The server or hosting provider may separately record request and security logs; the host, fields, access and retention for those logs have not been supplied. No analytics or advertising scripts, analytics SDKs, or custom cookie code were found in the website source reviewed.</p>
+    <h2>Website accounts and browser storage</h2>
+    <p>On login, signup, password reset or account-page use, the Firebase Authentication web SDK receives the email and password and handles account identity, optional display name, verification and reset emails. The website uses Firebase’s browser Auth instance without setting a custom persistence mode; Firebase documents local browser persistence as its default, so the sign-in state may remain after the browser closes. Public marketing pages and forms do not require login. These website accounts are not linked in this source to Android memories or the website’s Supabase form tables.</p>
+    <h2>Android app processing is separate</h2>
+    <p>The local Android source inspected stores saved memory records in a Room database on the device. A record can include title, shared text or URL, source, summary, keywords, category, action items, target location, captured coordinates and creation time. The app accepts shared text/URLs. No image picker, screenshot OCR, Firebase Authentication flow, Supabase client, or remote memory-sync client was found in this repository version; the Supabase mobile cloud migration alone does not demonstrate that the app uses it.</p>
+    <p>The app requests foreground/background location and notification permissions. When permission is available, it can read a current or last-known location, store coordinates locally, create 200-metre target-location geofences that do not expire, and show a local notification with a memory title and summary. The code uses Google Play location services and Android geocoding; precise platform/provider handling and device backup contents require verification. The manifest permits Android backup, while the checked-in backup rules do not exclude the Room database. Do not assume local records are encrypted or excluded from device backup.</p>
+    <p>For content analysis, the Android client sends shared text or a URL to a FastAPI backend using a private-LAN HTTP address. The backend’s social-video path can download video with a downloader, upload it to Google Gemini for analysis, attempt to delete the Gemini file, and remove its temporary local directory. Its ordinary analysis sends the shared content to that backend; if it fails, the app can send the content or URL to Firebase AI/Google AI. The repository contains no verified production hosting, endpoint authentication, processing region, provider retention terms, or guarantee that cleanup always succeeds. The Android source also logs raw URLs, AI output and geofence coordinates; this is a pre-launch privacy/security issue.</p>
+    <h2>Providers, access and location</h2>
+    <p>Source code indicates Firebase Authentication for website accounts, a configured Supabase database for website form writes, Google/Firebase AI and Google Play location services in the Android source, and an Android FastAPI backend that calls Google Gemini. The production host, backend operator, current Supabase project identity, service-provider contracts, regions, administrative users and live access controls have not been independently verified. The website migration SQL enables RLS and grants the server role insert-only access to the two form tables, but remote policy state and operator access remain to be checked.</p>
+    <h2>Retention, correction and deletion</h2>
+    <p>The website migrations and endpoint configure no automatic deletion period for waitlist or contact rows. No retention schedule, staff review process or verified administrative erasure procedure has been provided. A website user can request deletion of their Firebase Authentication account; the page does not delete website form rows, Android Room records, device backups, uploaded provider files or other account data. Those systems are not linked by the inspected website code.</p>
+    <p>On Android, an individual memory can be deleted from the local library. No account-wide deletion flow or automatic cloud deletion was found in the inspected app source. Room uses destructive migration fallback, which may discard local records during a schema migration; that is not a reliable erasure workflow. Provider-side deletion and backup retention are unverified.</p>
+    <h2>Your choices and requests</h2>
+    <p>You can leave optional form fields blank. To ask about access to information, correction, completion, updating, erasure, withdrawing a request’s consent, or a grievance, use the <Link href="/privacy-requests">privacy request form</Link> or email <SupportContact />. Privacy-related submissions trigger a limited alert after the database confirms the save; it does not verify identity, locate Android device data, or perform deletion automatically. Do not send credentials or identity documents. A human operator and secure follow-up channel must be established before this can be relied on as a rights-handling service.</p>
+    <p>The DPDP Act uses the term “Data Principal.” Its commencement is phased; the main notice, consent, Data Fiduciary duties and rights provisions are scheduled for 18 months after the Gazette notification, currently calculated as 13 May 2027. This page does not state that the full core framework is already in force. Once the relevant provisions apply, statutory rights and complaint escalation are subject to the Act and Rules. The operator must publish the contact of a person authorised to answer processing questions and establish an effective grievance mechanism.</p>
+    <h2>Children, incidents and policy changes</h2>
+    <p>The intended age group for Echo has not been confirmed. The Android source has no age gate or verified parental-consent workflow. The operator must decide whether children may use the product and implement applicable safeguards before collecting their data.</p>
+    <p>No incident response plan, monitoring coverage or breach-notification workflow has been evidenced. A responsible operator must establish and test one. This draft will show a revised date when updated; no direct notification channel for policy changes has been implemented. For now, the contact is: <SupportContact /></p>
+    <p><a href="https://www.meity.gov.in/static/uploads/2024/02/Digital-Personal-Data-Protection-Act-2023.pdf">Digital Personal Data Protection Act, 2023</a> · <a href="https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf">Digital Personal Data Protection Rules, 2025</a>.</p>
+  </>;
+}
+
+export function PrivacyPolicyDraft() {
+  return <>
+    {legalReview}
+    <h2>Echo and the data operator</h2>
+    <p>“Echo” is a product name, not the confirmed legal identity of the website operator. The operator’s legal name and address, and the person responsible for Data Protection / grievances, remain unconfirmed. A public support and privacy email is listed below. This policy remains a draft until the missing details are supplied and approved.</p>
+    <h2>What the website collects and why</h2>
+    <ul>
+      <li><strong>Early access:</strong> required email and consent time; optional name and use case; recorded to administer and respond to an early-access request.</li>
+      <li><strong>Contact/privacy request:</strong> required email, topic, message and consent time; optional name; recorded so the operator can review and respond to the stated enquiry or request.</li>
+      <li><strong>Creation times:</strong> the server supplies <code>consent_at</code>; the database supplies <code>created_at</code> for both forms.</li>
+      <li><strong>Abuse controls:</strong> the form endpoint reads a forwarded IP for in-memory rate limiting and checks a hidden honeypot; the form schema does not store the IP. Hosting logs and their retention are not known.</li>
+      <li><strong>Website accounts:</strong> Firebase Authentication receives email/password and optional signup display name to create, verify, sign in, reset or delete a website auth account.</li>
+    </ul>
+    <p>Name and use case are optional. Public pages do not require an account. The form does not send marketing newsletters; any future marketing purpose would need its own notice, choice and recorded preference.</p>
+    <h2>Android app data is not the website data</h2>
+    <p>The inspected Android source stores shared content and extracted memory details in a local Room database, including URLs/text, titles, summaries, keywords, categories, action items and target/capture locations. It requests precise/approximate and background location plus notification access; location may be saved with a memory and used for geofences and local reminders. Its analysis code sends shared URLs/text to a local-network FastAPI backend and may send content/URLs to Firebase AI/Google AI; the backend may download social videos and submit them to Gemini. No verified mobile cloud sync, Firebase user-auth flow, image/OCR flow or Supabase data client was found in that app source. See the <Link href="/security">security draft</Link> and the internal readiness checklist for unverified issues.</p>
+    <h2>Recipients and transfers</h2>
+    <p>Website form rows are sent from the server endpoint to the configured Supabase URL using a server-only key. Website authentication uses Firebase Authentication. Android content analysis uses the providers and flows described above. The production host, backend and app operators, provider agreements, regions, subprocessors and any international transfers are not confirmed; no region or transfer claim is made.</p>
+    <h2>Access, security and service logs</h2>
+    <p>Website SQL migrations enable row-level security on the waitlist/contact tables and specify insert-only service-role grants; no remote inspection was performed for this review. The form endpoint does not provide a public read route. Website error logging is limited in code to configuration-presence booleans or provider error code/form type; it does not intentionally log form contents. Hosting logs remain provider-controlled and unaudited. Android source logs shared URLs, model output and precise geofence coordinates, and allows Android backup; these need remediation and review. No encryption-at-rest, end-to-end encryption, certification, penetration test or breach-monitoring claim is made.</p>
+    <h2>Retention</h2>
+    <p>No automatic expiry is configured for form rows and the operator has not set a schedule. Founders must choose retention periods by purpose, implement deletion, and cover backups, logs and processors before publication. Firebase account deletion removes the Firebase Auth user when it succeeds, but not form rows or Android memories. Android local database and provider-side retention/deletion need a separate verified workflow.</p>
+    <h2>Data Principal rights and grievance route</h2>
+    <p>For a request or grievance, use <Link href="/privacy-requests">Privacy requests</Link> or email <SupportContact /> directly. A privacy-related form submission triggers a limited alert after it is saved, but the form is not an identity-verified or automated rights mechanism. Do not send passwords, one-time codes or identity documents. No request ticketing, response-time commitment or automatic data action is implemented; the operator must establish a secure review and escalation process.</p>
+    <p>The DPDP Act provides for rights including access to information about personal data and its sharing, correction/completion/updating, erasure, grievance redressal and nomination, and the ability to withdraw consent where consent is the basis. The relevant provisions are phased and are scheduled to commence 18 months from 13 November 2025 (calculated as 13 May 2027). This draft is preparatory, not a statement that those core provisions are already in force. When applicable, the statutory complaint route is governed by the Act and Rules, including the Data Protection Board of India; do not treat this draft or the current form as a complete grievance mechanism.</p>
+    <h2>Children and policy updates</h2>
+    <p>Echo’s intended age group and child safeguards are unconfirmed. The inspected app has no age gate or verified parental-consent workflow. The operator must determine the audience and implement applicable safeguards before collecting children’s data. This policy’s last updated date is 9 October 2026; no direct policy-change notification system exists yet.</p>
+    <h2>Contact</h2>
+    <p>Privacy contact: <SupportContact /></p>
+    <p>Read the separate <Link href="/privacy-notice">collection notice</Link>, <Link href="/terms">Terms draft</Link>, <Link href="/cookies">Cookie notice draft</Link>, and <Link href="/delete-account">account deletion limits</Link>.</p>
+  </>;
+}
+
+export function PrivacyRequestInfo() {
+  return <>
+    {legalReview}
+    <p>This form uses the same contact endpoint as general enquiries. Choose “Privacy rights request” or “Privacy grievance,” provide only the minimum details needed to understand your request, and use an email you can access. You may instead email Echo directly at <SupportContact />. Do not include passwords, verification codes, identity documents or detailed location/health information.</p>
+    <h2>What this form can and cannot do</h2>
+    <p>If the configured backend confirms a save, the message is stored in Echo’s contact table. For privacy-rights, grievance and privacy/account-deletion topics, the server then submits a limited alert containing only the request type, submission ID, submission time and this page link. It excludes your email address and message. The alert does not confirm human review, generate a request case, verify your identity, retrieve Android device records, or delete records. If the alert fails, the saved request remains in the database and the form asks you to contact <SupportContact /> directly. No response-time or secure fulfilment workflow has been tested.</p>
+    <h2>Requests you can describe</h2>
+    <ul><li>Access to information about data the operator holds and its processing/sharing.</li><li>Correction, completion or updating of information.</li><li>Erasure or withdrawal of consent, where applicable and subject to law.</li><li>A grievance about processing or a previous request.</li><li>Nomination or questions about the applicable Data Principal rights.</li></ul>
+    <h2>Identity and safety</h2>
+    <p>Echo must verify that a requester is entitled to the records before disclosing or changing them, using a proportionate method. Do not upload identity proofs. The website’s Firebase account is not linked to Android local memories, and no account-wide app deletion interface was found. If your request concerns the Android app, state that clearly; the team must provide an approved way to verify and locate those records.</p>
+    <p>For access, correction, erasure, withdrawal, grievance and escalation rights under the DPDP Act, see the <Link href="/privacy">privacy draft</Link>. Its commencement is phased, and the core rights provisions are not yet in force as of this draft’s update date.</p>
+  </>;
+}
+
+export function TermsDraft() {
+  return <>
+    {legalReview}
+    <p>This draft is not final terms or legal advice. The actual service operator, legal name, address, governing jurisdiction and dispute forum have not been supplied.</p>
+    <h2>Website and service</h2>
+    <p>This website describes Echo and accepts early-access or contact requests when its configured form service is available. Authentication pages create website Firebase accounts. The website does not currently connect a signed-in web user to Android memories or provide a subscription checkout. Android capabilities and availability must be confirmed separately before relying on them.</p>
+    <h2>Accounts and acceptable use</h2>
+    <p>Use an email address you control, protect your password and do not use another person’s account. Do not probe, disrupt, reverse engineer or abuse the website or submit unlawful material, malware, another person’s personal data without authority, or content you lack rights to share. Do not place confidential or highly sensitive information in forms.</p>
+    <h2>Your content and Echo materials</h2>
+    <p>You remain responsible for content you submit and for having the rights or permissions needed to share it. The website’s name, supplied logo, text and design are presented by Echo; the owner and registration/trademark status have not been confirmed. No transfer of your content ownership is stated by this draft; terms governing app content and AI processing require founder and counsel review.</p>
+    <h2>Availability, disclaimers and termination</h2>
+    <p>The website and any planned product features may change or be unavailable. Content and illustrative previews are not a guarantee of current app functionality. No checkout is enabled; displayed Premium prices and trial terms are proposals, not an offer or purchase. To stop using website account features, sign out or request deletion of the Firebase Auth account. That action does not erase Android or form data.</p>
+    <h2>Complaints and disputes</h2>
+    <p>Contact Echo at <SupportContact /> or through the contact form for a website issue. The operator has not supplied a legal identity, governing-law clause, address or dispute forum, so this draft does not invent one. Mandatory rights under applicable law are not waived. Founders and Indian counsel must select and review appropriate provisions before publication.</p>
+    <h2>Operator contact</h2><p><SupportContact /></p>
+  </>;
+}
+
+export function CookiesDraft() {
+  return <>
+    {legalReview}
+    <h2>What the source audit found</h2>
+    <p>The inspected website source contains no analytics or advertising tag, analytics SDK, consent-management SDK, or custom cookie read/write. The server-side Supabase client disables session persistence. Firebase Authentication is loaded on account pages and its web SDK uses local browser persistence by default; that authentication state may be stored in browser storage and survive a browser restart.</p>
+    <h2>Essential and optional storage</h2>
+    <p>Authentication storage is used to keep a user signed in to the website. No optional analytics or advertising storage is configured in the source reviewed. Hosting or third-party provider behavior cannot be fully audited from this repository, and no browser cookie scan after live authentication was performed. Do not describe this as a complete cookie audit until tested on the production host and with an authenticated session.</p>
+    <h2>Your choices</h2><p>You can sign out from the website account page and clear site data through your browser. Clearing browser storage may sign you out. The privacy contact is: <SupportContact /></p>
+  </>;
+}
+
+export function SecurityDraft() {
+  return <>
+    {legalReview}
+    <h2>Website controls visible in source</h2>
+    <ul><li>Supabase form access uses a server-only helper and inserts only into two form tables.</li><li>The website migrations enable RLS and grant the server role insert access; remote grants and policies have not been verified in this review.</li><li>Server errors avoid logging submitted values; the route’s code logs only config-presence flags or a provider error code and form type.</li><li>The form endpoint has request size checking, field validation, a honeypot and per-process in-memory rate limiting. Forwarded-IP trust, shared limits across server instances and hosting logs require review.</li><li>Response headers include CSP, frame restrictions, referrer and content-type controls. CSP allows inline script/style, and production HTTPS/security configuration has not been tested.</li></ul>
+    <h2>Android/backend issues requiring remediation</h2>
+    <p>The inspected Android app allows cleartext traffic and calls a private-LAN HTTP backend. The FastAPI endpoints shown have no authentication guard in the reviewed source. Android log statements include shared URLs, AI output and geofence coordinates. The app requests background location and notifications, permits OS backup, and does not exclude its Room database in the checked-in backup rules. The backend may upload downloaded videos to Gemini and only attempts remote/local temporary-file cleanup. Do not expose that backend publicly or describe these safeguards as production-ready without changes and testing.</p>
+    <h2>Incident response and claims</h2>
+    <p>No incident response owner, breach detection/notification process, access-log review, backup recovery drill, independent audit or certification was evidenced. No encryption method or end-to-end protection is claimed. Founders must designate a responsible operator, access approvers, escalation path and breach playbook, and test them before collecting production data.</p>
+    <h2>Report a concern</h2>
+    <p>Use the <Link href="/privacy-requests">privacy request form</Link> or <Link href="/contact">contact page</Link>; they store a message only when the configured form service confirms it. Privacy-related topics trigger a limited alert after the save; general contact topics do not, and no human review is guaranteed. Do not include secrets, passwords or sensitive files. Contact: <SupportContact /></p>
+  </>;
+}
+
+export function AccountDeletionDraft() {
+  return <>
+    {legalReview}
+    <h2>Website Firebase account</h2>
+    <p>If signed in, use the account page’s delete button. The website calls Firebase Authentication’s user-deletion operation; Firebase may require a recent sign-in. This operation is limited to the website Firebase Auth identity. It does not delete website form rows, Android app data, device backups, Gemini uploads, or data held by other providers. For help, email <SupportContact />.</p>
+    <h2>Android memories and form records</h2>
+    <p>The inspected Android app stores memories locally and provides per-memory deletion, but no account-wide delete flow was found. The site is not linked to those records and cannot locate or delete them. Request manual review through <Link href="/privacy-requests">Privacy requests</Link> or email <SupportContact />; the form does not automatically verify or action a deletion request. Website form rows also have no self-service deletion control or configured expiry.</p>
+    <h2>Safe manual handling</h2>
+    <p>The operator must verify identity proportionately through a channel already associated with the account before disclosing or erasing data. Never request passwords, one-time codes or unnecessary identity documents. Keep a restricted request log with receipt date, systems searched, decision, completion date and any lawful retention reason, without copying message contents into an unprotected tracker. Founders must assign an owner and establish a reviewed response process before claiming account-wide deletion.</p>
+  </>;
+}

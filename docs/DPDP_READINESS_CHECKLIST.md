@@ -1,0 +1,121 @@
+# Echo DPDP Readiness Checklist
+
+**Status:** internal working document — not a compliance certificate or legal opinion  
+**Reviewed:** 9 October 2026  
+**Scope:** Echo website source and a separate local Android source checkout, reviewed read-only. No `.env.local` values were inspected. No remote database, Firebase project, production host, or Android service was accessed.
+
+This review supports engineering and founder decisions. An Indian lawyer should review the final notice, terms, legal basis, commencement and operational procedures before launch. The website privacy pages remain visibly marked as drafts.
+
+## Evidence-based processing inventory
+
+### Website
+
+| Flow | Data seen in source | Purpose / destination | What source establishes and what it does not |
+|---|---|---|---|
+| Early access | Required email, optional name/use case, affirmative checkbox; server-generated `consent_at`; database `created_at` and UUID | Validate and insert into `public.waitlist_signups` using server-side Supabase client | `components/forms.tsx`, `lib/lead-validation.mjs`, `app/api/forms/route.ts`, and `supabase/migrations/202610090001_website_forms.sql`. SQL declares unique email. No newsletter/marketing provider or outgoing email exists in the website source. Actual remote schema/state and live submissions were not checked in this audit. |
+| Contact and privacy requests | Required email, subject, message, checkbox; optional name; `consent_at`, `created_at`, UUID | Insert into `public.contact_messages`; the UI offers enquiry, privacy request, grievance and deletion topics | Privacy-related topics trigger a limited Gmail SMTP alert after a successful insert; general enquiries do not. No ticketing, identity check, request tracking or automatic deletion. No live Supabase or SMTP request was submitted during this review. |
+| Abuse controls | Forwarded IP header, request size, hidden honeypot | In-process, per-instance rate limiter and bot check | IP is not a column in either form table. The limiter map is in memory, expires stale entries on subsequent requests and is neither shared across serverless instances nor a verified trusted-proxy IP source. Hosting access logs are outside this repo and unknown. |
+| Website authentication | Email/password; optional signup display name; Firebase Auth account, verification/reset flows; auth-state observer | Firebase Authentication | `lib/firebase.ts` and `components/auth-form.tsx` use Firebase Auth. Public pages/forms do not require sign-in. No `setPersistence` call exists; Firebase documents local browser persistence as the web SDK default. Firebase sign-in state can remain after browser close. This website Auth identity is not linked by this source to mobile memories or form rows. No live auth flow was run. |
+| Website cookies/storage and analytics | No custom cookie read/write, analytics SDK/tag, or advertising tag found in website source | Firebase Auth’s browser-local persisted state; Next.js/hosting/provider behavior may add further storage/logging | No browser storage inspection was run after a live sign-in and no production host is identified. Do not claim a complete cookie audit. Analytics are not configured in source. |
+| Website server errors | Supabase config-presence booleans or provider error code and form kind in route diagnostics | Troubleshooting without form values | `app/api/forms/route.ts` does not intentionally log request bodies, emails, URL or provider error message. Host logs/retention and access are unverified. |
+| Website data access/deletion | Migrations enable RLS on the two form tables; 002 revokes table rights from `PUBLIC`, `anon`, `authenticated`, `service_role`, then grants insert only to `service_role` | Website endpoint writes only; operator would need a restricted admin path for review/erasure | This is only the local SQL text. No remote catalog inspection occurred here. Migrations set no TTL, export, correction, erasure, staff-alert or consent-version mechanism. A server secret is highly privileged; keep it server-side and restrict project access. |
+| Website Firebase account deletion | Signed-in account page calls Firebase `deleteUser(user)` | Deletes that Firebase Authentication identity if provider accepts it | UI warns that it does not delete cloud memories or other records; recent sign-in may be required. No account deletion was tested. It does not remove contact or waitlist rows. |
+| Other website providers | Firebase Auth and Supabase calls appear in code; no email delivery, analytics or advertising integrations found | Auth and form storage only | Production Supabase project identity, Firebase configuration/project identity, hosting operator, contracts, sub-processors, region, transfer locations, backup/log behavior and actual role access were not verified. Never represent local environment-variable presence as a successful integration test. |
+
+### Android app and its separate backend
+
+Read-only source inspected in the separate local `Signal` checkout: app manifest/build config, Room entities/DAO/repository, capture and location code, AI service/network client, and FastAPI backend. Neither checkout was modified. Credential/config files such as Firebase service JSON, local properties and backend `.env` were not inspected.
+
+| Flow | Evidence in source | Privacy implications / limits |
+|---|---|---|
+| Saved memory data | Room `MemoryEntity` stores title, content, source URL/type, summary, keywords, category, action items, capture/target locations, coordinates and timestamp. User can delete an individual memory. | Stored locally in Room. No Supabase SDK/client or remote memory synchronization was found in the inspected app code. No encryption-at-rest implementation was verified. Room database uses destructive-migration fallback, which may discard local rows but is not a controlled erasure process. |
+| Shared URLs/text and AI | Android `MainActivity` accepts `ACTION_SEND` text. `SignalAiService` sends content/URL to Retrofit `SignalBackendClient` at a private-LAN `http://…:8000/` address. If ordinary analysis fails, the code can send the same text/URL to Firebase AI using Google AI backend. | Shared URLs/text and returned title/summary are personal data where they identify a person. Backend hosting/operator, authentication, HTTPS, location, provider retention and service contracts are unverified. The checked-in private-LAN address is not a production endpoint. |
+| Social-video analysis | FastAPI `/analyze-social` downloads a social URL with a video downloader, uploads the resulting file to Google Gemini, attempts to delete the provider file, and removes a temporary local directory. A separate `/analyze-video` upload endpoint has similar cleanup attempts; no Android client call to that endpoint was found. | Cleanup is best-effort, not proof of provider erasure or no retained copies. No processing region or retention terms verified. Backend routes shown have no authentication guard. Do not expose this backend publicly before security review and remediation. |
+| Images/OCR | No image picker, screenshot/photo upload, or OCR path was found in the inspected memory capture source. | Do not advertise image/OCR processing as a current mobile data flow based on the repository reviewed. Other app versions or branches may differ. |
+| Firebase/Supabase auth or cloud sync | App Gradle includes Firebase AI and Google Services plugin; inspected dependencies/source do not include Firebase Authentication or a Supabase client. The separate SQL migration is not evidence of a working app integration. | No mobile account-identity, remote-memory or cross-device deletion workflow was verified. Do not conflate website Firebase Auth with the Android app. |
+| Location/geofences/notifications | Manifest requests coarse, fine and background location plus notifications. `MainActivity` requests permissions; `LocationHelper` reads current/last-known location; capture may store coordinates. Geofence code registers a 200m, never-expiring target geofence; Android local notifications show memory title/summary. | Location permission and third-party Google Play location services are involved. Coordinates/geofence registration are logged to Android logcat. Notification content may be visible on device lock screens depending on device settings. No remote location upload was found in this path, but actual platform telemetry was not audited. |
+| Device backup | Manifest sets `allowBackup=true`; backup/data-extraction files do not exclude Room database data. | Actual backup behavior depends on Android version, device settings and platform policy. Do not claim device backup excludes memories or that uninstall securely erases backups. |
+| Android logs/network | `SignalAiService` logs raw shared URLs and AI response titles/summaries/errors; geofence code logs precise latitude/longitude. Manifest allows cleartext traffic. | Remove/sanitize personal content and coordinates from logs, use HTTPS and authenticate/rate-limit backend endpoints, review crash/diagnostic tools, restrict log access, and test release builds. |
+
+## Website legal and request workflow status
+
+- Added an independently understandable, linked **collection notice** at `/privacy-notice` and a separate **privacy request** page at `/privacy-requests`.
+- Added links from the footer, website forms and sign-in/account pages. The form consent language is purpose-limited to handling an early-access request or a specific enquiry; no separate newsletter consent is collected or implied.
+- Privacy request types cover access, correction/completion/update, erasure, consent withdrawal and grievance. The route is the existing contact form writing to `contact_messages`; no schema or migration was changed.
+- The public support/privacy contact is `echo_with_ss@gmail.com`. Privacy-rights, grievance and privacy/account-deletion form submissions now trigger a limited server-side Gmail SMTP alert after the database confirms the insert. The alert contains the request type, row ID, submission time and privacy-request link, but no submitter email or full message. An alert failure does not undo the saved row. This is not human review: the form does not verify identity, create a case ID, query Android records, or execute deletion. The responsible operator, assigned contact owner, response deadline, secure staff queue and monitored admin process remain unconfirmed. Do not market the form as a completed statutory mechanism.
+- Suggested manual handling procedure, to approve and assign before launch:
+  1. Restrict access to the Supabase dashboard/table to named, authorised reviewers; use MFA and audit access. Never copy `SUPABASE_SECRET_KEY` into a browser or a request spreadsheet.
+  2. Review the contact queue on a defined schedule and record only a case reference, receipt date, request category, assigned reviewer, verification status, systems checked, outcome, completion date and any reason data must be retained. Keep message content out of general task boards.
+  3. Verify the requester proportionately using a pre-existing account or a reply through a verified address, without requesting passwords, OTPs, ID documents or extra sensitive data. Do not disclose whether an email is in the waitlist before verification.
+  4. Search only the relevant systems: website `waitlist_signups`/`contact_messages`, website Firebase Auth, and, after a separate identity/data map exists, Android device records and provider uploads. The website cannot currently locate or delete Android records.
+  5. Apply correction/deletion only through an authorised reviewed procedure, address processor copies/backups/logs, tell the requester what was completed or why something must be kept, and close the restricted case log. Define legal hold and escalation handling with counsel first.
+  6. Configure a monitored privacy/grievance contact, secure staff notification, a reviewed response SLA and a request log retention period before relying on the workflow.
+
+## Decisions required from founders / operators
+
+- Confirm the person or legal entity that operates the website/app, its registered/legal name (if any), address, business contact, privacy/grievance contact and who is authorised to respond. Do not publish a company-registration claim without evidence.
+- Decide intended audience and age eligibility. The inspected Android source has no age-gate or verified parental-consent flow; decide if children may use Echo and implement applicable controls before collecting their data.
+- Confirm the real website production host, Firebase project/app/domain and templates, Supabase project/region, backend host/operator, provider contracts, sub-processors, data-transfer locations and administrator roles. No credentials or actual environment values were reviewed for this audit.
+- Document purpose-by-purpose retention periods for waitlist, contact/privacy requests, website Auth accounts, Firebase/Google AI submissions, server/host logs, backend temp files, Gemini provider files, Android Room data, geofences, device backups and diagnostics. Implement expirations/deletion and processor instructions; none is centrally configured today.
+- Decide whether early access is strictly a request/response list or a future marketing list. If ongoing marketing is introduced, obtain separate optional consent and store its status, purpose, timestamp and notice/version; current schema has only `consent_at` and cannot evidence separate choices.
+- Approve language and process for consent withdrawal. Today the form captures only a timestamp, not the exact notice/version; withdrawal is a contact-form request without staff notification or automatic suppression/deletion.
+- Name a privacy grievance owner and response channel; approve identity-verification, escalation, recordkeeping, incident/breach response, backup recovery and processor contract procedures.
+- Verify actual product features with the Android product owner (Shivam) and distinguish website account features from app accounts, local memory, AI processing and any future cloud sync.
+- Have Indian counsel review the final notice, terms, lawful purposes, child applicability, retention, transfers, grievance and complaint route, liability/contract clauses, and any other applicable Indian law. Terms cannot name a governing law, court or registered operator until founders decide and counsel reviews.
+
+## Technical work required before the draft can become a reliable public notice
+
+- Establish actual infrastructure and access inventory: production host request logs/retention, Firebase Auth configuration, Supabase project/catalog/region/backups/admin roles, Android backend hosting/authentication/HTTPS, AI provider settings/retention and any external sub-processors.
+- Provide an authenticated, access-controlled staff path for reviewing, correcting and deleting form rows; no public read/delete endpoint. Establish alerts and request ownership. The current contact route only inserts.
+- Add retention and cleanup mechanisms for form records, request records, logs, local/backend temporary files, provider-uploaded files, and backups; verify deletion rather than relying only on API calls. No migration was changed as part of this review.
+- Review form IP rate limiting: trust only proxy-normalised client addresses; use a shared limiter at production scale; define minimised retention and prevent log inclusion. Current limiter is in-memory and instance-local.
+- Define and store the exact notice/consent version and affirmative purpose choice. The current SQL stores only `consent_at`; any schema work needs a separately reviewed migration and must not be applied without approval.
+- Remediate Android personal-data logs, cleartext networking, unauthenticated backend routes, backup scope, location consent/UX and exposed local-backend configuration. Verify Android AI/provider deletion and vendor terms. No Android file was edited in this task.
+- Test real Firebase and Supabase flows, unauthorized reads, duplicate handling, auth session deletion, provider cleanup and production browser storage only after the production target is confirmed and with approved test records.
+- Confirm that `echo_with_ss@gmail.com` is monitored, assign a privacy/grievance owner, configure a secure request review and response workflow, and define a policy-change publication channel; test rights-form delivery and monitoring before public data collection.
+
+## DPDP Act/Rules pre-launch mapping
+
+| Provision / topic | Application to Echo review | Required action / status |
+|---|---|---|
+| Act ss. 3–5; Rules r. 3 (scope, lawful purpose, notice) | Website and app data must have a specified lawful purpose and clear itemised notice; notice also needs rights/withdrawal/complaint routes and authorised contact. | Draft pages and form notices added; public contact email configured, while operator identity, exact host/provider data, region, assigned contact owner and reviewed lawful basis remain unresolved. |
+| Act s. 6; Rules r. 3 | Consent (where used) is affirmative, informed, purpose-limited and withdrawable with comparable ease; fiduciary must be able to evidence notice and consent. | Purpose-specific checkboxes are not preselected; data model stores time only, not notice/version text. Implement versioned evidence and withdrawal suppression/removal. |
+| Act s. 7(a) | Voluntary provision for the stated purpose may be a lawful use where conditions apply. | Counsel must confirm basis for each form flow; do not treat a checkbox as blanket consent for unrelated marketing or AI use. |
+| Act s. 8; Rules rr. 6–9 | Accountability, valid processor contracts, reasonable safeguards, breach notices, erasure when purpose ends, contact and grievance mechanism. | No operator, retention schedule, processor agreements, breach plan, staff-access audit, response contact or operational grievance queue is verified. Android source has security/logging blockers. |
+| Act s. 9; Rules rr. 10–11 | Child data needs verifiable parental consent and safeguards, subject to applicable exemptions/notifications. | Audience unknown; Android source shows no age gate or parent-verification flow. Founder decision and counsel review required. |
+| Act s. 11 | Data Principal may seek a summary of data/processing and information on sharing, within statutory terms. | Rights route is informational only and lacks verification, retrieval and response process. |
+| Act s. 12 | Correction, completion, update and erasure rights, subject to law/retention requirements. | No self-service tool or account-wide cross-system erasure; manual procedure and data map needed. |
+| Act s. 13; Rules rr. 9, 14 | Readily available grievance redressal and published request means/contact; exhaustion of fiduciary grievance opportunity before Board complaint. | Request form exists but is unmonitored and no grievance contact/owner/response process exists. Do not call it fully operational. |
+| Act s. 14 | Nomination right according to the Act/Rules. | No workflow; include in final rights procedure or explain a reviewed way to exercise it when operative. |
+| Act s. 16 | Cross-border transfers may be subject to Government restrictions/requirements. | Provider regions/transfers are unknown. Inventory provider configurations and counsel-review before publishing transfer statements. |
+| Rules r. 8 / Third Schedule and r. 8(3) logs | Certain inactivity-retention periods are scoped to listed classes/purposes; other specified processing logs have a one-year minimum. These are not a blanket generic retention schedule for every small website. | Counsel must decide whether any listed class/purpose applies. Do not promise generic retention periods; define Echo’s operational schedule and statutory exceptions. |
+
+### Phased commencement (official notifications)
+
+The Central Government’s Act commencement notification, G.S.R. 843(E), is dated 13 November 2025 and lists different commencement cohorts. On the notification’s stated intervals, the schedule is:
+
+- **13 November 2025:** Act s. 1(2), s. 2, ss. 18–26, s. 35, ss. 38–43 and s. 44(1), (3).
+- **13 November 2026 (one year):** Act s. 6(9) and s. 27(1)(d).
+- **13 May 2027 (18 months):** Act ss. 3–5; s. 6(1)–(8), (10); ss. 7–17; s. 27 except clause (d) of subsection (1); ss. 28–34, 36–37; s. 44(2).
+
+The DPDP Rules, G.S.R. 846(E), were also notified on 13 November 2025. Rules 1, 2 and 17–21 commenced on publication; Rule 4 is scheduled one year later; Rules 3, 5–16, 22 and 23 are scheduled at 18 months. Read the Rules with MeitY’s December 2025 corrigendum (G.S.R. 892(E)); it corrects text including the phrase specifying the commencement interval. This review is dated before the 13 November 2026 and 13 May 2027 cohorts. Verify official notifications again before relying on a future effective date. This schedule does not mean no law applies today, nor that all core DPDP obligations are already operative.
+
+Official primary sources:
+
+- [Digital Personal Data Protection Act, 2023 (MeitY PDF)](https://www.meity.gov.in/static/uploads/2024/02/Digital-Personal-Data-Protection-Act-2023.pdf)
+- [Digital Personal Data Protection Rules, 2025 (MeitY PDF)](https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf)
+- [Act commencement notification G.S.R. 843(E) (MeitY PDF)](https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf)
+- [MeitY DPDP Rules page including corrigendum](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025)
+
+## Release gate
+
+- [ ] Identify the responsible operator, privacy/grievance contact, monitor and approver.
+- [ ] Obtain founder and Indian counsel approval of all legal drafts and the launch data map.
+- [ ] Confirm actual provider, hosting, transfer, admin-access, log and backup behavior.
+- [ ] Approve audience/child-data decision and implement any required controls.
+- [ ] Approve purpose-specific retention and implement verified cleanup/erasure paths.
+- [ ] Establish authenticated identity verification, request routing, tracking, response, escalation and breach procedures.
+- [ ] Remediate Android/backend security and personal-data logging before any production rollout.
+- [ ] Add versioned consent evidence and implement separate optional marketing consent only if that purpose is introduced.
+- [ ] Verify live form/auth behavior and all production legal links using approved test records.
+- [ ] Recheck commencement, Rules/corrigenda and any later notifications before launch.
