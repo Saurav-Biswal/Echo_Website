@@ -15,6 +15,7 @@ import {
   localGuideUnavailableMessage,
   mapGuideFormField,
   redactPersonalData,
+  verifiedFounderFacts,
 } from '../lib/echo-guide-knowledge.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -22,6 +23,7 @@ const root = new URL('../', import.meta.url);
 test('navigation commands resolve only to the explicit internal route allowlist', () => {
   assert.deepEqual(findNavigation('Take me to the features page.'), { path: '/features', label: 'features page' });
   assert.deepEqual(findNavigation('Open early access.'), { path: '/early-access', label: 'early-access page' });
+  assert.deepEqual(findNavigation('Show me the About page.'), { path: '/about', label: 'about page' });
   assert.deepEqual(findNavigation('Open the privacy policy.'), { path: '/privacy', label: 'privacy policy draft' });
   assert.deepEqual(findNavigation('Go back to the homepage.'), { path: '/', label: 'homepage' });
   assert.equal(findNavigation('Open https://attacker.example/'), null);
@@ -41,6 +43,22 @@ test('website answers use explicit grounded entries and unknown questions fall b
   assert.equal(findKnowledge('What happens when I join early access?').id, 'early-access');
   assert.match(localGuideUnavailableMessage(), /could not find a reliable answer/i);
   assert.equal(findKnowledge('What is the weather on Mars tomorrow?'), null);
+});
+
+test('founder questions return direct verified answers and a safe About destination', () => {
+  assert.equal(verifiedFounderFacts.founded, 'October 2026');
+  for (const question of ['Who founded Echo?', 'Who is the founder?', 'Who is Echo’s co-founder?', 'Who started Echo?', 'When was Echo founded?', 'How old are Shivam and Saurav?', 'Tell me about Echo’s founders']) {
+    const answer = findKnowledge(question);
+    assert.equal(answer.id, 'founders', question);
+    assert.equal(answer.href, '/about', question);
+    assert.match(answer.answer, /Shivam Chouthe|Saurav Biswal|October 2026/, question);
+    assert.doesNotMatch(answer.answer, /university|degree|award|funding|registered|met at/i, question);
+  }
+  assert.match(findKnowledge('Who is the founder?').answer, /Shivam Chouthe.*Saurav Biswal.*both founders, age 20/i);
+  assert.match(findKnowledge('Is Saurav Biswal a founder?').answer, /Saurav Biswal.*both founders, age 20/i);
+  assert.match(findKnowledge('Who is Echo’s co-founder?').answer, /Saurav Biswal.*both founders, age 20/i);
+  assert.match(findKnowledge('When was Echo founded?').answer, /October 2026/);
+  assert.match(findKnowledge('How old are Shivam and Saurav?').answer, /Shivam Chouthe and Saurav Biswal are both Echo founders, age 20/);
 });
 
 test('form intent mapping collects required fields and never maps consent', () => {
@@ -64,6 +82,23 @@ test('privacy requests stay local even when the visitor does not start an assist
   assert.match(panel, /will not send this request to Groq/);
 });
 
+test('Ask Echo click opens the guide and sends typed questions with a local fallback', async () => {
+  const trigger = await readFile(new URL('components/echo-guide-home-trigger.tsx', root), 'utf8');
+  const wrapper = await readFile(new URL('components/echo-guide.tsx', root), 'utf8');
+  const panel = await readFile(new URL('components/echo-guide-panel.tsx', root), 'utf8');
+  const api = await readFile(new URL('app/api/echo-guide/route.ts', root), 'utf8');
+  assert.match(trigger, /<button type="button"[^>]*aria-haspopup="dialog"[^>]*aria-controls="echo-guide-dialog" onClick=\{guide\.openGuide\}/);
+  assert.match(wrapper, /value=\{\{ registerForm, fillExistingForm, reviewExistingForm, openGuide \}\}/);
+  assert.match(wrapper, /showGuide && open && <EchoGuidePanel/);
+  assert.match(panel, /<textarea[^>]*id="echo-guide-input"[^>]*onChange=/);
+  assert.match(panel, /onSubmit=\{\(event\) => \{ event\.preventDefault\(\); sendMessage\(draft\); \}\}/);
+  assert.match(panel, /event\.key === 'Enter' && !event\.shiftKey/);
+  assert.match(panel, /onClick=\{\(\) => sendMessage\(suggestion\)\}/);
+  assert.match(panel, /if \(aiOptIn\) \{[\s\S]*?requestAiReply\(safeText, history\)/);
+  assert.match(panel, /const local = findKnowledge\(text\);[\s\S]*?mode: 'local'/);
+  assert.match(api, /isSameOriginGuideRequest/);
+  assert.match(api, /verifyConsentToken/);
+});
 test('guide never submits forms or bypasses React state and consent', async () => {
   const panel = await readFile(new URL('components/echo-guide-panel.tsx', root), 'utf8');
   const forms = await readFile(new URL('components/forms.tsx', root), 'utf8');
@@ -86,17 +121,20 @@ test('speech has an unsupported-browser fallback and requires explicit activatio
   const panel = await readFile(new URL('components/echo-guide-panel.tsx', root), 'utf8');
   assert.match(panel, /Speech recognition is not supported by this browser/);
   assert.match(panel, /onClick=\{speechPhase === 'listening' \? stopListening : startListening\}/);
-  assert.match(panel, /recognitionRef\.current\) return/);
-  assert.match(panel, /recognition\.onresult = null/);
-  assert.match(panel, /recognition\.continuous = false/);
-  assert.match(panel, /Processing speech/);
+  assert.match(panel, /speechSessionRef\.current\) return/);
+  assert.match(panel, /speechSessionRef\.current\?\.abort\(\)/);
+  assert.match(panel, /Stop listening/);
+  const speech = await readFile(new URL('lib/echo-guide-speech.mjs', root), 'utf8');
+  assert.match(speech, /recognition\.continuous = true/);
+  assert.match(speech, /recognition\.interimResults = true/);
+  assert.match(speech, /this\.restartCount >= this\.maxRestarts/);
   assert.match(panel, /Transcription ready\. Review or edit it before sending/);
-  assert.match(panel, /classifySpeechRecognitionError\(event\.error\)/);
   assert.match(panel, /speechWindow\.SpeechRecognition \|\| speechWindow\.webkitSpeechRecognition/);
-  assert.match(panel, /recognition\.lang = 'en-IN'/);
+  assert.match(panel, /const sendMessage = useCallback\(async \(rawText: string\) => \{\s*speechSessionRef\.current\?\.abort\(\)/);
+  assert.match(speech, /recognition\.lang = this\.language/);
   assert.match(panel, /Speech error \(\$\{diagnostic\.category\}\)/);
-  assert.match(panel, /activeRecognition\.abort\(\)/);
-  assert.match(panel, /setDraft\(transcript\.slice/);
+  assert.match(speech, /classifySpeechRecognitionError\(event\.error\)/);
+  assert.match(speech, /\.slice\(0, 2000\)/);
   assert.doesNotMatch(panel, /sendMessage\(transcript/);
   assert.equal(classifySpeechRecognitionError('not-allowed').category, 'not-allowed');
   assert.match(classifySpeechRecognitionError('not-allowed').message, /permission was denied/i);
@@ -125,6 +163,7 @@ test('chat layout keeps one scrollable conversation and a responsive fixed compo
   assert.match(css, /\.echo-guide-suggestions \{[^}]*flex-wrap: wrap/s);
   assert.match(css, /100dvh/);
   assert.match(css, /@media \(max-height: 600px\)/);
+  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.echo-guide-launcher:not\(\.echo-guide-home-trigger\) \{ width: 52px/);
   assert.match(css, /\.echo-guide-panel :is\(button, a, summary, textarea, input\):focus-visible/);
   assert.match(css, /prefers-reduced-motion: reduce/);
 });

@@ -6,8 +6,8 @@ import {
   detectFormIntent,
   findKnowledge,
   findNavigation,
+  isFounderQuestion,
   hasSpeechRecognition,
-  classifySpeechRecognitionError,
   isNavigationRequest,
   isPrivacyRequestIntent,
   isSafeGuideMessage,
@@ -18,6 +18,7 @@ import {
   resolveContactSubject,
 } from '@/lib/echo-guide-knowledge.mjs';
 import type { GuideFormKind, GuideFormValues } from '@/components/echo-guide-context';
+import { EchoSpeechSession } from '@/lib/echo-guide-speech.mjs';
 
 type Props = {
   onClose: () => void;
@@ -28,15 +29,12 @@ type Props = {
 
 type GuideMessage = { id: number; from: 'guide' | 'visitor'; text: string; href?: string; source?: string; mode?: 'local' | 'ai'; review?: { path: string; kind: GuideFormKind } };
 type FormFlow = { kind: GuideFormKind; path: string; subject: string | null; step: 'email' | 'subject' | 'message' };
-type SpeechAlternative = { transcript: string };
-type SpeechEvent = { results: ArrayLike<ArrayLike<SpeechAlternative>> };
-type SpeechErrorEvent = { error: string };
 type BrowserSpeechRecognition = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  onresult: ((event: SpeechEvent) => void) | null;
-  onerror: ((event: SpeechErrorEvent) => void) | null;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
@@ -93,22 +91,14 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
   const panelRef = useRef<HTMLElement>(null);
   const conversationRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
-  const heardSpeechRef = useRef(false);
-  const speechMessageRef = useRef(false);
+  const speechSessionRef = useRef<EchoSpeechSession | null>(null);
   const workingRef = useRef(false);
   const consentRequestRef = useRef<Promise<void> | null>(null);
   const previousMessageCountRef = useRef(messages.length);
 
   const closeGuide = useCallback(() => {
-    const activeRecognition = recognitionRef.current;
-    if (activeRecognition) {
-      recognitionRef.current = null;
-      activeRecognition.onresult = null;
-      activeRecognition.onerror = null;
-      activeRecognition.onend = null;
-      try { activeRecognition.abort(); } catch { /* Closing the panel always wins over speech cleanup errors. */ }
-    }
+    speechSessionRef.current?.abort();
+    speechSessionRef.current = null;
     setSpeechPhase('idle');
     void (async () => {
       try { await consentRequestRef.current; } catch { /* A failed opt-in has no cookie to revoke. */ }
@@ -192,14 +182,8 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
-      const recognition = recognitionRef.current;
-      recognitionRef.current = null;
-      if (recognition) {
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        recognition.abort();
-      }
+      speechSessionRef.current?.abort();
+      speechSessionRef.current = null;
     };
   }, [closeGuide]);
 
@@ -261,6 +245,9 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
   }, [addGuide, onFillForm]);
 
   const sendMessage = useCallback(async (rawText: string) => {
+    speechSessionRef.current?.abort();
+    speechSessionRef.current = null;
+    setSpeechPhase('idle');
     const text = rawText.trim();
     if (!isSafeGuideMessage(text)) {
       setError(text.length > 2000 ? 'Please keep a message under 2,000 characters.' : 'Type a question or use one of the suggestions.');
@@ -331,7 +318,10 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
       if (aiOptIn) {
         const answer = await requestAiReply(safeText, history);
         if (answer) {
-          addGuide(answer, { mode: 'ai' });
+          addGuide(answer, {
+            ...(isFounderQuestion(text) ? { href: '/about', source: 'Read: Echo founders and origin' } : {}),
+            mode: 'ai',
+          });
           return;
         }
         const local = findKnowledge(text);
@@ -357,15 +347,8 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
     }
   }, [addGuide, aiOptIn, flow, messages, onNavigate, processFlowMessage]);
 
-  function clearRecognition(recognition: BrowserSpeechRecognition) {
-    recognition.onresult = null;
-    recognition.onerror = null;
-    recognition.onend = null;
-    if (recognitionRef.current === recognition) recognitionRef.current = null;
-  }
-
   function startListening() {
-    if (!speechSupported || speechPhase !== 'idle' || recognitionRef.current) return;
+    if (!speechSupported || speechPhase !== 'idle' || speechSessionRef.current) return;
     const speechWindow = window as SpeechWindow;
     const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!Recognition) {
@@ -373,69 +356,35 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
       setVoiceStatus('Speech recognition is not available here. You can type your question instead.');
       return;
     }
-    try {
-      const recognition = new Recognition();
-      recognition.lang = 'en-IN';
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      heardSpeechRef.current = false;
-      speechMessageRef.current = false;
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results).map((result) => result[0]?.transcript ?? '').join(' ').trim();
-        heardSpeechRef.current = transcript.length > 0;
-        if (transcript) {
-          speechMessageRef.current = true;
-          setDraft(transcript.slice(0, 2000));
-          setSpeechPhase('processing');
-          setVoiceStatus('Processing speech…');
+    const session = new EchoSpeechSession(Recognition, {
+      language: 'en-IN',
+      initialTranscript: draft,
+      onTranscript: (transcript) => setDraft(transcript),
+      onError: (diagnostic) => setVoiceStatus(`Speech error (${diagnostic.category}): ${diagnostic.message} Text input remains available.`),
+      onStatus: (phase, transcript) => {
+        if (phase === 'listening') {
+          setSpeechPhase('listening');
+          setVoiceStatus('Listening. Speak at your own pace; you can review or edit the words before sending.');
+          return;
         }
-      };
-      recognition.onerror = (event) => {
-        speechMessageRef.current = true;
-        const diagnostic = classifySpeechRecognitionError(event.error);
-        setVoiceStatus(`Speech error (${diagnostic.category}): ${diagnostic.message} Text input remains available.`);
+        if (phase === 'processing') {
+          setSpeechPhase('processing');
+          setVoiceStatus('Finishing the current speech segment…');
+          return;
+        }
+        if (speechSessionRef.current === session) speechSessionRef.current = null;
         setSpeechPhase('idle');
-        clearRecognition(recognition);
-        recognition.abort();
-      };
-      recognition.onend = () => {
-        clearRecognition(recognition);
-        setSpeechPhase('idle');
-        if (heardSpeechRef.current) setVoiceStatus('Transcription ready. Review or edit it before sending.');
-        else if (!speechMessageRef.current) setVoiceStatus('No speech was recognized. Try again or type your question.');
-        else setVoiceStatus('Speech recognition stopped. You can try again or type your question.');
-      };
-      recognitionRef.current = recognition;
-      setSpeechPhase('listening');
-      setVoiceStatus('Listening. Speak now; you can review the words before sending.');
-      recognition.start();
-    } catch (startError) {
-      const recognition = recognitionRef.current;
-      if (recognition) {
-        clearRecognition(recognition);
-        recognition.abort();
-      }
-      setSpeechPhase('idle');
-      const name = startError instanceof DOMException ? startError.name : 'other';
-      const diagnostic = classifySpeechRecognitionError(name);
-      setVoiceStatus(`Speech startup error (${diagnostic.category}): ${diagnostic.message} Text input remains available.`);
-    }
+        setVoiceStatus(phase === 'exhausted'
+          ? 'Speech recognition kept ending, so listening has stopped. Review the transcript or use text input.'
+          : transcript ? 'Transcription ready. Review or edit it before sending.' : 'Listening stopped. You can try again or type your question.');
+      },
+    });
+    speechSessionRef.current = session;
+    session.start();
   }
 
   function stopListening() {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-    speechMessageRef.current = true;
-    setSpeechPhase('processing');
-    setVoiceStatus('Processing speech…');
-    try {
-      recognition.stop();
-    } catch {
-      clearRecognition(recognition);
-      recognition.abort();
-      setSpeechPhase('idle');
-      setVoiceStatus('Speech recognition stopped unexpectedly. Review the input or type instead.');
-    }
+    speechSessionRef.current?.stop();
   }
 
   return <div className="echo-guide-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeGuide(); }}>
@@ -475,7 +424,7 @@ export default function EchoGuidePanel({ onClose, onNavigate, onFillForm, onRevi
           <label className="sr-only" htmlFor="echo-guide-input">Ask Echo Guide a question</label>
           <textarea ref={inputRef} id="echo-guide-input" rows={2} maxLength={2000} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Ask about Echo or tell me where to take you…" onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(draft); } }} />
           <div className="echo-guide-actions">
-            <button type="button" className="echo-guide-mic" onClick={speechPhase === 'listening' ? stopListening : startListening} disabled={!speechSupported || speechPhase === 'processing'} aria-label={speechPhase === 'listening' ? 'Stop listening' : speechPhase === 'processing' ? 'Processing speech' : speechSupported ? 'Start speech recognition' : 'Speech recognition unavailable'} title={speechSupported ? 'Speak a question' : 'Speech recognition unavailable'}>{speechPhase === 'listening' ? '■' : '🎙'}<span>{speechPhase === 'listening' ? 'Stop' : speechPhase === 'processing' ? 'Processing' : 'Speak'}</span></button>
+            <button type="button" className="echo-guide-mic" onClick={speechPhase === 'listening' ? stopListening : startListening} disabled={!speechSupported || speechPhase === 'processing'} aria-label={speechPhase === 'listening' ? 'Stop listening' : speechPhase === 'processing' ? 'Finishing speech' : speechSupported ? 'Start speech recognition' : 'Speech recognition unavailable'} title={speechPhase === 'listening' ? 'Stop listening' : speechSupported ? 'Speak a question' : 'Speech recognition unavailable'}>{speechPhase === 'listening' ? '■' : '🎙'}<span>{speechPhase === 'listening' ? 'Stop listening' : speechPhase === 'processing' ? 'Finishing…' : 'Speak'}</span></button>
             <button className="echo-guide-send" type="submit" disabled={!draft.trim() || working}>Send <span aria-hidden="true">↗</span></button>
           </div>
         </form>
