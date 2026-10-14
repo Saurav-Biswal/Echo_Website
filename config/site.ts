@@ -14,4 +14,4 @@ export const plans = {
   premium: { name: 'Echo Premium', trial: '7 days', monthly: '₹99 / month', halfYear: '₹549 / 6 months', annual: '₹999 / year', status: 'Proposed pricing — not available for purchase.' },
 };
 
-export const capabilityStatus = 'A local Android source checkout was inspected for data flows, but current release availability and every advertised capability still need confirmation with the product team before launch.';
+export const capabilityStatus = 'Echo is still being built; app availability and supported features will be confirmed before launch.';

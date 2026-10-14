@@ -6,14 +6,9 @@ import { notifyPrivacyRequest } from '@/lib/privacy-notifications';
 import { persistFormAndNotify, PRIVACY_NOTIFICATION_RECIPIENT } from '@/lib/privacy-notification-core.mjs';
 
 export const runtime = 'nodejs';
-const hits = new Map<string, { count:number; start:number }>();
 
 export async function POST(request:Request){
   const length=Number(request.headers.get('content-length')||0);if(length>10_000)return NextResponse.json({error:'This message is too large.'},{status:413});
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  const now=Date.now();
-  for(const [key,entry] of hits){if(now-entry.start>60_000)hits.delete(key)}
-  const old=hits.get(ip); if(!old||now-old.start>60_000)hits.set(ip,{count:1,start:now});else if(old.count>=5)return NextResponse.json({error:'Please wait a minute before trying again.'},{status:429});else old.count++;
   let data:Record<string,unknown>;try{data=await request.json()}catch{return NextResponse.json({error:'Please check the form and try again.'},{status:400})}
   if(typeof data.website==='string'&&data.website)return NextResponse.json({error:'Submission could not be processed.'},{status:400});
   const validated=validateLeadPayload(data,new Date().toISOString());

@@ -30,6 +30,10 @@ npm run build
 
 The unit tests check route coverage, centralized proposed pricing, placeholder-only environment examples and form input validation. They do not prove live Firebase or Supabase integration. The project does not include browser automation; manually check desktop/mobile navigation, forms and accessibility with real configured services before launch.
 
+## Echo Guide
+
+The public pages include a lazy-loaded Echo Guide with local, website-grounded answers, allowlisted navigation, optional browser speech recognition, and prefill support for the existing forms. Visitors can separately opt in to Groq AI for ordinary chat; form values and deterministic navigation/form flows stay local. Groq needs a server-only `GROQ_API_KEY`, and chat can fall back to local answers when the provider is unavailable. See [docs/ECHO_GUIDE.md](docs/ECHO_GUIDE.md) for limits, privacy behavior, deployment setup and required verification. Review and approve the provider's handling and the draft public disclosure before configuring a production key.
+
 ## Firebase web authentication
 
 Use the existing Firebase project ID `com-example-signal-d63fc`; do not create or substitute a different project.
@@ -78,7 +82,7 @@ where schemaname = 'public'
   and tablename in ('waitlist_signups', 'contact_messages');
 ```
 
-The API validates fields, limits each process instance to five requests per minute per forwarded IP and uses a hidden honeypot. In-memory rate limiting does not coordinate across serverless instances; use a shared limiter or edge protection before broad public launch. Privacy-rights, grievance and privacy/account-deletion messages trigger a limited Gmail SMTP alert only after the contact row is successfully inserted; alerts omit the submitter's email and message. Notification failure does not undo the saved request or repeat the insert. Duplicate waitlist records receive the same generic confirmation to avoid disclosing whether an email is already listed. Test genuine submissions, duplicate handling, invalid input, outage behavior, rate limiting and unauthorized reads against the configured service before launch. No live Supabase test or migration has been performed from this workspace.
+The API validates fields, checks request size and uses a hidden honeypot. On Netlify, `netlify/edge-functions/forms-rate-limit.ts` applies a platform rate limit of five `POST /api/forms` requests per client IP and site domain per 60-second window, then passes allowed requests to the existing handler. The limiter does not trust request-supplied forwarding headers and is enforced before the Next.js serverless function. It is not active under plain `next dev`/`next start` or on another host. Netlify can take up to 10 seconds to begin blocking after a threshold is crossed, so some additional requests may reach the app; the limit is per IP and does not stop distributed abuse or clients that rotate IPs. Netlify may process client IPs for enforcement and its own security logs; Echo does not store IP in its form tables, and host log retention/access remain unverified. Verify the rule in the Netlify deploy log's post-processing stage after the next deployment, and safely confirm a 429 on that deployment before relying on it. Privacy-rights, grievance and privacy/account-deletion messages trigger a limited Gmail SMTP alert only after the contact row is successfully inserted; alerts omit the submitter's email and message. Notification failure does not undo the saved request or repeat the insert. Duplicate waitlist records receive the same generic confirmation to avoid disclosing whether an email is already listed. Test genuine submissions, duplicate handling, invalid input, outage behavior, rate limiting and unauthorized reads against the configured service before launch. No live Supabase test or migration has been performed from this workspace.
 
 ## Configuration
 
