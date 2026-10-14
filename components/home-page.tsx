@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { OrbitVisual } from '@/components/orbit-visual';
 import { PhonePreview } from '@/components/visuals';
 import { capabilityStatus } from '@/config/site';
+import { site } from '@/config/site';
 import { EchoGuideHomeTrigger } from '@/components/echo-guide-home-trigger';
 
 export function Home() {
@@ -14,6 +15,7 @@ export function Home() {
             <h1>Good things shouldn’t disappear into your <em>saved folder.</em></h1>
             <p>Save the videos, ideas, places, and discoveries you come across. Echo is being built to turn scattered saves into personal memories you can find again.</p>
             <div className="hero-actions">
+              {site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}
               <Link className="button" href="/early-access">Get early access <span>↗</span></Link>
               <Link className="text-link" href="/how-it-works">See how it works <span>→</span></Link>
             </div>
@@ -48,7 +50,7 @@ export function Home() {
         <div className="feature-copy"><div className="kicker">MADE FOR THE THINGS YOU KEEP</div><h2>A little more context changes everything.</h2><p>Echo is being built around a simple loop: save a useful discovery, keep it with context, and return when you need it. The screens shown here are an illustration of that idea, not a live app capture.</p><div className="feature-list"><div><span>01</span> Save a discovery for later <small>PRODUCT DIRECTION</small></div><div><span>02</span> Keep useful context together <small>PRODUCT DIRECTION</small></div><div><span>03</span> Return when you need it <small>PRODUCT DIRECTION</small></div></div><p className="status-note">Echo’s current app availability and supported sources have not yet been confirmed. Join the list to register your interest; this is not an invitation or launch-date promise.</p><Link href="/features" className="text-link">Explore the product idea <span>→</span></Link></div>
       </div></section>
 
-      <section className="cta-band"><div className="cta-inner"><div><div className="kicker">BE THERE FROM THE BEGINNING</div><h2>Keep the good things close.</h2><p>Tell us what you’d want Echo to help you remember.</p></div><Link className="button" href="/early-access">Get early access <span>↗</span></Link></div></section>
+      <section className="cta-band"><div className="cta-inner"><div><div className="kicker">BE THERE FROM THE BEGINNING</div><h2>Keep the good things close.</h2><p>Tell us what you’d want Echo to help you remember.</p></div><div className="cta-actions">{site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}<Link className="button" href="/early-access">Get early access <span>↗</span></Link></div></div></section>
     </>
   );
 }
