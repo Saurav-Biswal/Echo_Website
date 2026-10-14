@@ -404,3 +404,15 @@ img, svg { max-width: 100%; }
   .echo-guide-ai-optin summary { min-height: 30px; }
   .echo-guide-suggestions { padding-block: 4px; }
 }
+
+.button-download { min-height: 52px; border: 1px solid #55a978; background: #dff3e4; color: #063d2e; box-shadow: 0 5px 18px #07543d18; }
+.button-download:hover { border-color: #8fd2a1; background: #c8ebd1; color: #063d2e; box-shadow: 0 9px 24px #07543d27; }
+.nav-links .button-download { min-height: 42px; padding-inline: 17px; }
+.cta-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+@media (max-width: 760px) {
+  .hero-actions { flex-wrap: wrap; gap: 14px 20px; }
+  .hero-actions .button-download { flex-basis: 100%; width: fit-content; }
+  .cta-actions { justify-content: flex-start; }
+  .cta-actions .button-download { flex-basis: 100%; width: fit-content; }
+  .nav-links .button-download { justify-content: flex-start; }
+}
