@@ -5,7 +5,7 @@ export const site = {
   description: 'A personal memory assistant for the useful things you find online.',
   url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
   androidDownloadUrl: getAndroidDownloadUrl(process.env.NEXT_PUBLIC_ANDROID_DOWNLOAD_URL),
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || 'echo_with_ss@gmail.com',
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || 'echowithss@gmail.com',
   team: [] as { name: string; role: string }[],
   social: {} as Record<string, string>,
   legalEntity: '',
