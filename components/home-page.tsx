@@ -16,7 +16,7 @@ export function Home() {
             <h1>Good things deserve to be <em>remembered.</em></h1>
             <p>Save the things that catch your attention. Echo helps you organize, rediscover and remember them when they matter.</p>
             <div className="hero-actions">
-              {site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}
+              {site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} target="_blank" rel="noopener noreferrer" aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}
               <a className="button" href="#memory-story">Explore Echo <span>↓</span></a>
             </div>
             <div className="tiny-note">A new way to keep what catches your attention.</div>
@@ -40,7 +40,7 @@ export function Home() {
       </div></section>
 
       <section className="home-founders"><div className="home-founders-inner"><div><div className="kicker">THE PEOPLE BEHIND ECHO</div><h2>Built around a simple question.</h2><p>Echo was founded in {verifiedFounderFacts.founded} by {verifiedFounderFacts.founders.map((person) => person.name).join(' and ')}. Meet the founders and read the story behind the idea.</p><Link className="text-link" href="/about">Meet Echo founders <span aria-hidden="true">→</span></Link></div><div className="home-founder-names" aria-label="Echo founders">{verifiedFounderFacts.founders.map((person) => <span key={person.name}>{person.name}<small>{person.role}</small></span>)}</div></div></section>
-      <section className="cta-band"><div className="cta-inner"><div><div className="kicker">BE THERE FROM THE BEGINNING</div><h2>Keep the good things close.</h2><p>Tell us what you’d want Echo to help you remember.</p></div><div className="cta-actions">{site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}<Link className="button" href="/early-access">Get early access <span>↗</span></Link></div></div></section>
+      <section className="cta-band"><div className="cta-inner"><div><div className="kicker">BE THERE FROM THE BEGINNING</div><h2>Keep the good things close.</h2><p>Tell us what you’d want Echo to help you remember.</p></div><div className="cta-actions">{site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} target="_blank" rel="noopener noreferrer" aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}<Link className="button" href="/early-access">Get early access <span>↗</span></Link></div></div></section>
     </>
   );
 }
