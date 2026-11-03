@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { OrbitVisual } from '@/components/orbit-visual';
-import { PhonePreview } from '@/components/visuals';
 import { capabilityStatus } from '@/config/site';
 import { site } from '@/config/site';
 import { EchoGuideHomeTrigger } from '@/components/echo-guide-home-trigger';
 import { verifiedFounderFacts } from '@/lib/echo-guide-knowledge.mjs';
+import { MemoryStory } from '@/components/memory-story';
 
 export function Home() {
   return (
@@ -13,12 +13,11 @@ export function Home() {
         <div className="hero-inner">
           <div className="hero-copy">
             <div className="eyebrow">YOUR PERSONAL MEMORY ASSISTANT</div>
-            <h1>Keep the good things you <em>find.</em></h1>
-            <p>Echo is being built to help you save useful discoveries and find them again when they matter.</p>
+            <h1>Good things deserve to be <em>remembered.</em></h1>
+            <p>Save the things that catch your attention. Echo helps you organize, rediscover and remember them when they matter.</p>
             <div className="hero-actions">
               {site.androidDownloadUrl && <a className="button button-download" href={site.androidDownloadUrl} aria-label="Download Echo for Android">Download Echo for Android <span aria-hidden="true">↓</span></a>}
-              <Link className="button" href="/early-access">Get early access <span>↗</span></Link>
-              <Link className="text-link" href="/how-it-works">See how it works <span>→</span></Link>
+              <a className="button" href="#memory-story">Explore Echo <span>↓</span></a>
             </div>
             <div className="tiny-note">A new way to keep what catches your attention.</div>
             <Link className="home-story-link" href="/about">Meet the people building Echo <span aria-hidden="true">↗</span></Link>
@@ -33,23 +32,11 @@ export function Home() {
         {['Videos worth revisiting','Screenshots with context','Places you want to remember'].map((item) => <span className="trust-item" key={item}><i aria-hidden="true">✳</i>{item}</span>)}
       </div></div>
 
-      <section className="section"><div className="section-inner">
-        <div className="section-heading"><div><div className="kicker">THE SAVE-FOR-LATER PROBLEM</div><h2>Saved is not the same as remembered.</h2></div><p>Inspiration slips into a dozen folders and apps. Echo’s idea is simple: give the things you save a little context, so they’re easier to find when they matter.</p></div>
-        <div className="story-grid">
-          <article className="story-card"><div className="kicker">01 / THE SCATTER</div><h3>“I know I saved that somewhere.”</h3><p>Recipes, reels, screenshots and links pile up in different places. The moment passes. The useful bit gets harder to find.</p><div className="file-stack"><div>Saved posts <b>17 things</b></div><div>Screenshots <b>Maybe this one?</b></div><div>Browser tabs <b>Still open somewhere</b></div></div></article>
-          <article className="story-card dark"><div className="kicker">02 / THE IDEA</div><h3>A personal library with a memory for context.</h3><p>Echo aims to bring saved discoveries together with the details that help you rediscover them.</p><div className="memory-note"><small>MEMORY · IDEA</small><b>Sunday pasta idea</b><span>Recipe · from a video · saved last week</span></div></article>
-        </div>
-      </div></section>
+      <MemoryStory />
 
-      <section className="section"><div className="section-inner">
-        <div className="section-heading"><div><div className="kicker">A SIMPLE LOOP</div><h2>From “that’s useful” to “there it is.”</h2></div><p>Echo’s intended flow is built around a small habit: save what catches your attention, then come back to it with more context.</p></div>
-        <div className="steps-grid">{[['01','Capture','Keep a video, place, recipe, or idea you want to revisit.','◉'],['02','Organize','Echo’s product direction is to preserve useful context with each memory.','✳'],['03','Rediscover','Return to what you saved when the moment calls for it.','⌕']].map(([number,title,copy,icon]) => <article className="step" key={number}><div className="step-num">{number} /</div><div className="step-art">{icon}</div><h3>{title}</h3><p>{copy}</p></article>)}</div>
-        <p className="status-note">{capabilityStatus}</p>
-      </div></section>
-
-      <section className="section dark-section"><div className="section-inner feature-layout">
-        <PhonePreview />
-        <div className="feature-copy"><div className="kicker">MADE FOR THE THINGS YOU KEEP</div><h2>A little more context changes everything.</h2><p>Echo is being built around a simple loop: save a useful discovery, keep it with context, and return when you need it. The screens shown here are an illustration of that idea, not a live app capture.</p><div className="feature-list"><div><span>01</span> Save a discovery for later <small>PRODUCT DIRECTION</small></div><div><span>02</span> Keep useful context together <small>PRODUCT DIRECTION</small></div><div><span>03</span> Return when you need it <small>PRODUCT DIRECTION</small></div></div><p className="status-note">Echo’s current app availability and supported sources have not yet been confirmed. Join the list to register your interest; this is not an invitation or launch-date promise.</p><Link href="/features" className="text-link">Explore the product idea <span>→</span></Link></div>
+      <section className="section dark-section"><div className="section-inner product-story">
+        <div className="product-story-mark"><div className="product-story-orbit"><span>e</span></div><small>THE ECHO IDEA</small></div>
+        <div className="feature-copy"><div className="kicker">MADE FOR THE THINGS YOU KEEP</div><h2>Your attention deserves a memory.</h2><p>Echo is being built around a simple loop: save a useful discovery, keep it with context, and return when you need it.</p><div className="feature-list"><div><span>01</span> Save a discovery for later <small>CAPTURE</small></div><div><span>02</span> Keep useful context together <small>ORGANIZE</small></div><div><span>03</span> Return when you need it <small>REDISCOVER</small></div></div><p className="status-note">{capabilityStatus} Verified app screenshots are not included in this website repository yet.</p><Link href="/features" className="text-link">Explore the product idea <span>→</span></Link></div>
       </div></section>
 
       <section className="home-founders"><div className="home-founders-inner"><div><div className="kicker">THE PEOPLE BEHIND ECHO</div><h2>Built around a simple question.</h2><p>Echo was founded in {verifiedFounderFacts.founded} by {verifiedFounderFacts.founders.map((person) => person.name).join(' and ')}. Meet the founders and read the story behind the idea.</p><Link className="text-link" href="/about">Meet Echo founders <span aria-hidden="true">→</span></Link></div><div className="home-founder-names" aria-label="Echo founders">{verifiedFounderFacts.founders.map((person) => <span key={person.name}>{person.name}<small>{person.role}</small></span>)}</div></div></section>
