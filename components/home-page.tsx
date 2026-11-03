@@ -21,7 +21,7 @@ export function Home() {
             </div>
             <div className="tiny-note">A new way to keep what catches your attention.</div>
             <Link className="home-story-link" href="/about">Meet the people building Echo <span aria-hidden="true">↗</span></Link>
-            <EchoGuideHomeTrigger />
+            <EchoGuideHomeTrigger floating />
           </div>
           <OrbitVisual />
         </div>
